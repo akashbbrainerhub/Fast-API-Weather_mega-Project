@@ -10,6 +10,9 @@ from sqlalchemy.orm import relationship
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
     USER = "user"
+    ANALYST = "analyst"
+    MODERATOR = "moderator"
+    PREMIUM_USER = "premium_user"
 
 
 class User(Base):

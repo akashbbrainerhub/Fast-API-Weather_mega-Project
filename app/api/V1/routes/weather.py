@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from app.api.V1.dependencies.db import get_db
 from app.api.V1.dependencies.auth import get_current_user
 from app.services.city_service import get_or_create_city
+from app.services.permission_service import can_search_city
 from app.services.weather_service import get_weather
 from app.services.activity_service import log_activity
 
@@ -16,7 +17,12 @@ def search_city(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    city_obj = get_or_create_city(db, city, country)
+    if not can_search_city(db, current_user):
+        raise HTTPException(
+            status_code=403,
+            detail="Daily search limit reached"
+        )
+    city_obj = get_or_create_city(db, city, country,user_id=current_user.id)
     weather = get_weather(db, city_obj)
     log_activity(
         db=db,

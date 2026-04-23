@@ -1,11 +1,16 @@
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from sqlalchemy.orm import Session
 # from app.api.V1.dependencies.rbac import require_role
+from app.core.exceptions import BadRequestException
+from app.core.exceptions import BadRequestException
+from app.models import user
+from app.models import user
 from app.core.security import decode_token
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse
 from app.services.auth_service import regsiter_user, authenticate_user, login_user
 from app.api.V1.dependencies.db import get_db
+from app.core.exceptions import BadRequestException
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -46,7 +51,7 @@ def get_current_user(
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+        raise BadRequestException("Invalid email or password")
 
     return user
 

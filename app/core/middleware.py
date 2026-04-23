@@ -10,19 +10,21 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         db = SessionLocal()
 
         response = await call_next(request)
-        auth_header = request.headers.get("Authorization")
 
-        if auth_header and auth_header.startswith("Bearer "):
-            token = auth_header.split(" ")[1]
-            payload = decode_token(token)
+        if request.url.path == "/login":
+            auth_header = request.headers.get("Authorization")
 
-            if payload:
-                user_id = payload.get("user_id")
+            if auth_header and auth_header.startswith("Bearer "):
+                token = auth_header.split(" ")[1]
+                payload = decode_token(token)
 
-                user = db.query(User).filter(User.id == user_id).first()
-                if user:
-                    user.last_login = datetime.utcnow()
-                    db.commit()
+                if payload:
+                    user_id = payload.get("user_id")
+
+                    user = db.query(User).filter(User.id == user_id).first()
+                    if user:
+                        user.last_login = datetime.utcnow()
+                        db.commit()
 
         db.close()
         return response

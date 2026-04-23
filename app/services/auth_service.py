@@ -1,8 +1,14 @@
 from sqlalchemy.orm import Session
+from app.api.V1.dependencies import db
 from app.core.security import hash_password, verify_password, create_access_token
+from app.models import city
+from app.schemas import user
 from app.schemas.user import UserCreate , UserLogin ,UserResponse
 from app.models.user import UserRole , User
 from datetime import datetime
+from app.core.exceptions import BadRequestException
+
+from app.services.activity_service import log_activity
 
 def regsiter_user(db: Session, user_create: UserCreate) -> UserResponse:
     existing_user = db.query(User).filter(User.email == user_create.email).first()
@@ -26,14 +32,18 @@ def regsiter_user(db: Session, user_create: UserCreate) -> UserResponse:
 def authenticate_user(db: Session, user_login: UserLogin) -> User:
     user = db.query(User).filter(User.email == user_login.email).first()
     if not user:
-        raise ValueError("Invalid email or password")
-
+        raise BadRequestException("Invalid email or password")
     if not verify_password(user_login.password, user.password):
-        raise ValueError("Invalid email or password")
+        raise BadRequestException("Invalid email or password")
 
     user.last_login = datetime.utcnow()
     db.commit()
 
+    log_activity(
+        db=db,
+        user_id=user.id,
+        action="LOGIN"
+    )
     return user
 
 def login_user(user: User):

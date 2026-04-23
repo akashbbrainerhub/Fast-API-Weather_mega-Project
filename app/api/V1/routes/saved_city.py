@@ -22,7 +22,7 @@ def save_city_api(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    city_obj = get_or_create_city(db, city, country)
+    city_obj = get_or_create_city(db, city, country, current_user.id)
     saved = save_city(db, current_user.id, city_obj)
 
     return {

@@ -1,6 +1,7 @@
 from sqlalchemy.orm import Session
 from app.models.saved_city import SavedCity
 from app.models.city import City
+from app.services.activity_service import log_activity
 
 
 def save_city(db: Session, user_id, city: City):
@@ -45,4 +46,10 @@ def delete_saved_city(db: Session, user_id, saved_city_id):
 
     db.delete(saved)
     db.commit()
+    log_activity(
+        db=db,
+        user_id=user_id,
+        action="DELETE_CITY",
+        metadata={"saved_city_id": str(saved_city_id)}
+    )
     return True
