@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from app.api.V1.dependencies.db import get_db
 from app.api.V1.dependencies.rbac import require_role
 from app.core.response import success_response
+from app.core.security import hash_password
 from app.models.activity import Activity
 from app.models.user import User, UserRole
+from app.schemas.user import AdminManagedUserCreate
 from sqlalchemy import String, func
 from datetime import datetime
 
@@ -109,12 +111,55 @@ def top_cities(
         for r in result
     ]
 
-@router.post("/delete/user/{user_id}")
-def delete_user(user_id: str,db: Session = Depends(get_db),admin = Depends(require_role(UserRole.ADMIN))):
+
+@router.post("/users")
+def create_managed_user(
+    payload: AdminManagedUserCreate,
+    db: Session = Depends(get_db),
+    admin=Depends(require_role(UserRole.ADMIN))
+):
+    existing_user = db.query(User).filter(User.email == payload.email).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    new_user = User(
+        name=payload.name,
+        email=payload.email,
+        password=hash_password(payload.password),
+        role=UserRole(payload.role)
+    )
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+
+    return success_response(
+        {
+            "id": str(new_user.id),
+            "name": new_user.name,
+            "email": new_user.email,
+            "role": new_user.role.value,
+        },
+        message="User created successfully"
+    )
+
+
+@router.delete("/users/{user_id}")
+def delete_user(
+    user_id: str,
+    db: Session = Depends(get_db),
+    admin=Depends(require_role(UserRole.ADMIN))
+):
     user = db.query(User).filter(User.id == user_id).first()
 
     if not user:
-        return success_response({"message": "User not found"})
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.role not in (UserRole.ANALYST, UserRole.MODERATOR):
+        raise HTTPException(
+            status_code=403,
+            detail="Only analyst and moderator users can be deleted with this endpoint"
+        )
 
     db.delete(user)
     db.commit()

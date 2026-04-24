@@ -1,4 +1,5 @@
-from pydantic import BaseModel, EmailStr
+from typing import Literal
+from pydantic import BaseModel, EmailStr, Field
 
 
 class UserCreate(BaseModel):
@@ -10,6 +11,13 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     email: EmailStr
     password: str
+
+
+class AdminManagedUserCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=100)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+    role: Literal["analyst", "moderator"]
 
 
 class UserResponse(BaseModel):

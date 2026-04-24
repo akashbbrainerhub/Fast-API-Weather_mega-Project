@@ -1,42 +1,24 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-# from app.api.V1.dependencies.rbac import require_role
 from app.core.exceptions import BadRequestException
-from app.core.exceptions import BadRequestException
-from app.models import user
 from app.models import user
 from app.core.security import decode_token
 from app.models.user import User
 from app.schemas.user import UserCreate, UserLogin, UserResponse, TokenResponse
 from app.services.auth_service import regsiter_user, authenticate_user, login_user
 from app.api.V1.dependencies.db import get_db
-from app.core.exceptions import BadRequestException
+
+security = HTTPBearer()
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
-def _extract_token(raw_value: str | None) -> str | None:
-    if not raw_value:
-        return None
-
-    value = raw_value.strip()
-    lower_value = value.lower()
-
-    if lower_value.startswith("bearer "):
-        return value[7:].strip()
-
-    if lower_value.startswith("bearer"):
-        return value[6:].strip()
-
-    return value
-
 def get_current_user(
-    authorization: str | None = Header(default=None, alias="Authorization"),
-    auth: str | None = Header(default=None, alias="auth"),
-    token: str | None = Query(default=None),
+    credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ):
-    token_value = _extract_token(authorization) or _extract_token(auth) or _extract_token(token)
+    token_value = credentials.credentials
 
     if not token_value:
         raise HTTPException(status_code=401, detail="Missing Authorization header")
